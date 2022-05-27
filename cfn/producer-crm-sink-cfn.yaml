@@ -13,10 +13,10 @@ Parameters:
       - prod
   ProducerServiceStreamArn:
     Type: String
-  EebEventFilter:
-    Type: String
-  GatewayUrl:
-    Type: String
+  EventFilter:
+   Type: String
+  #GatewayUrl:
+  #  Type: String
 
 Resources:
   ##########################################################################
@@ -43,8 +43,9 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
-          EEB_EVENT_FILTER: !Ref EebEventFilter
-          GATEWAY_URL: !Ref GatewayUrl
+          #EEB_EVENT_FILTER: !Ref EebEventFilter
+          EVENT_FILTER: !Ref EventFilter
+          #GATEWAY_URL: !Ref GatewayUrl
           NO_COLOR: 'true'
           IGNORE_STREAM_MESSAGES: 'false'
       Events:
@@ -54,6 +55,7 @@ Resources:
             Stream: !GetAtt ProducerServiceConsumer.ConsumerARN
             StartingPosition: LATEST
             BatchSize: 100
+          \
             ParallelizationFactor: 10
             Enabled: true
             MaximumRetryAttempts: 7
@@ -77,6 +79,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
         - arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole
         - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AmazonS3ReadOnlyAccess
       Policies:
         - PolicyName: "necessary-permissions"
           PolicyDocument:

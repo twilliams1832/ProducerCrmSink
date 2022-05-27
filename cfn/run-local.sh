@@ -10,7 +10,8 @@ awsAccount="003888721705"
 if [ "$1" = "sit" ]; then
     env="sit"   
     awsAccount="754720606388"
-    s3_bucket="hpo-services-cloudformation-${env}-${awsAccount}"
+    #s3_bucket="hpo-services-cloudformation-${env}-${awsAccount}"
+    s3_bucket="test-cfn-bucket"
     profile="${env}-hpo-services"
     stack_name="producer-crm-sink-${env}"
 elif [ "$1" = "prod" ]; then
@@ -19,8 +20,10 @@ elif [ "$1" = "prod" ]; then
 else
     env="dev"   
     awsAccount="003888721705"
-    s3_bucket="hpo-services-cloudformation-${env}-${awsAccount}"
-    profile="${env}-hpo-services"
+    #s3_bucket="hpo-services-cloudformation-${env}-${awsAccount}"
+    s3_bucket="test-cfn-bucket"
+    #profile="${env}-hpo-services"
+    profile="default"
     stack_name="producer-crm-sink-${env}"
 fi
 
@@ -28,7 +31,8 @@ fi
 #lumeris-aws login -p $profile
 
 #aws-azure-login --profile $profile
-aws sso login --profile $profile
+#aws sso login --profile $profile
+
 
 # Build the artifacts and zip them up
 if [ "$1" != "skip-build" ] && [ "$2" != "skip-build" ]; then
@@ -64,8 +68,8 @@ aws cloudformation package \
     --profile $profile
 
 # Build up the parameters and tags
-params=$(lumeris-aws parse-parameters -e=$env)
-tags=$(lumeris-aws parse-tags)
+params=$(cat test-params)
+#tags=$(lumeris-aws parse-tags)
 
 # Update the Cloudformation Stack.
 aws cloudformation deploy \
@@ -75,5 +79,5 @@ aws cloudformation deploy \
     --stack-name $stack_name \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides $params \
-    --tags $tags \
+    #--tags $tags \
     --profile $profile

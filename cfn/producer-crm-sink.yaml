@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: An AWS Serverless Application demonstrating the Facets event coordinator.
+Description: An AWS Serverless Application demonstrating the Producer CRM Sink.
 Parameters:
   Environment:
     Type: String
@@ -10,140 +10,28 @@ Parameters:
     - sit
     - stg
     - prod
-  ApiVpceId:
+  ProducerServiceStreamArn:
     Type: String
-  ReplayStreamArn:
+  EventFilter:
     Type: String
-  MemberServiceStreamArn:
-    Type: String
-  ClaimServiceStreamArn:
-    Type: String
-  VaultUri:
-    Type: String
-    Default: https://vault.global.hcs.cloud:8200
-  VaultAuthRole:
-    Type: String
-  VaultSecretPath:
-    Type: String
-  EebEventFilter:
-    Type: String
-  GatewayUrl:
-    Type: String
-  EnableIncidentCreation:
-    Type: String
-    Default: true
-  FacetApiUrl:
-    Type: String
-  ServiceNowBaseUrl:
-    Type: String
-  ClaimsMergeCount:
-    Type: String
-    Default: 10
-  FacetsRequestDelayTime:
-    Type: String
-    Default: 0
-Conditions:
-  IsProduction:
-    Fn::Equals:
-    - Ref: Environment
-    - prod
 Resources:
-  MemberServiceConsumer:
+  ProducerServiceConsumer:
     Type: AWS::Kinesis::StreamConsumer
     Properties:
       ConsumerName:
-        Fn::Sub: facets-event-coordinator-member-service-${Environment}
+        Fn::Sub: producer-crm-sink-stream-consumer-${Environment}
       StreamARN:
-        Ref: MemberServiceStreamArn
-  ClaimServiceConsumer:
-    Type: AWS::Kinesis::StreamConsumer
-    Properties:
-      ConsumerName:
-        Fn::Sub: facets-event-coordinator-claim-service-${Environment}
-      StreamARN:
-        Ref: ClaimServiceStreamArn
-  ReplayConsumer:
-    Type: AWS::Kinesis::StreamConsumer
-    Properties:
-      ConsumerName:
-        Fn::Sub: facets-event-coordinator-replay-${Environment}
-      StreamARN:
-        Ref: ReplayStreamArn
-  FacetsEventCoordinatorBucketKMSKey:
-    Type: AWS::KMS::Key
-    Properties:
-      Description:
-        Fn::Sub: Factes Event Coordinator Key for ${Environment} Environment
-      Enabled: true
-      EnableKeyRotation: false
-      KeyPolicy:
-        Version: '2012-10-17'
-        Id: key-default-1
-        Statement:
-        - Sid: Allow administration of the key
-          Effect: Allow
-          Principal:
-            AWS:
-              Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
-          Action:
-          - kms:Create*
-          - kms:Describe*
-          - kms:Enable*
-          - kms:List*
-          - kms:Put*
-          - kms:Update*
-          - kms:Revoke*
-          - kms:Disable*
-          - kms:Get*
-          - kms:Delete*
-          - kms:ScheduleKeyDeletion
-          - kms:CancelKeyDeletion
-          - kms:Decrypt
-          - kms:Encrypt
-          - kms:GenerateDataKey
-          - kms:TagResource
-          - kms:UntagResource
-          Resource: '*'
-        - Sid: Allow cloudwatch log cryto
-          Effect: Allow
-          Principal:
-            Service:
-              Fn::Sub: logs.${AWS::Region}.amazonaws.com
-          Action:
-          - kms:Encrypt*
-          - kms:Decrypt*
-          - kms:ReEncrypt*
-          - kms:GenerateDataKey*
-          - kms:Describe*
-          Resource: '*'
-      KeyUsage: ENCRYPT_DECRYPT
-      PendingWindowInDays: 7
-  FacetsEventCoordinatorBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      AccessControl: Private
-      BucketName:
-        Fn::Sub: facets-event-coordinator-${Environment}-${AWS::Region}-${AWS::AccountId}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            KMSMasterKeyID:
-              Fn::GetAtt:
-              - FacetsEventCoordinatorBucketKMSKey
-              - Arn
-            SSEAlgorithm: aws:kms
+        Ref: ProducerServiceStreamArn
   KinesisTriggeredLambdaHandler:
     Type: AWS::Serverless::Function
     Properties:
-      Layers:
-      - Fn::Sub: arn:aws:lambda:${AWS::Region}:634166935893:layer:vault-lambda-extension:6
       Role:
         Fn::GetAtt:
         - Role
         - Arn
-      CodeUri: s3://hpo-services-cloudformation-dev-003888721705/f7b57a459ba48460aa27929779864ff2
+      CodeUri: s3://test-cfn-bucket/669616f412f031d94839b392d3dcecd8
       FunctionName:
-        Fn::Sub: facets-event-coordinator-${Environment}
+        Fn::Sub: producer-crm-sink-${Environment}
       Handler: dist/lambda-entry-point.handler
       Runtime: nodejs12.x
       Description: Function is called in response to a kinesis event
@@ -153,71 +41,17 @@ Resources:
         Variables:
           ENVIRONMENT:
             Ref: Environment
-          VAULT_ADDR:
-            Ref: VaultUri
-          VAULT_AUTH_PROVIDER: aws
-          VAULT_AUTH_ROLE:
-            Ref: VaultAuthRole
-          VAULT_SECRET_PATH:
-            Ref: VaultSecretPath
-          EEB_EVENT_FILTER:
-            Ref: EebEventFilter
-          GATEWAY_URL:
-            Ref: GatewayUrl
-          FACET_API_URL:
-            Ref: FacetApiUrl
-          SERVICE_NOW_BASE_URL:
-            Ref: ServiceNowBaseUrl
-          OUTPUT_S3:
-            Ref: FacetsEventCoordinatorBucket
+          EVENT_FILTER:
+            Ref: EventFilter
           NO_COLOR: 'true'
-          ENABLE_INCIDENT_CREATION:
-            Ref: EnableIncidentCreation
-          FACETS_REQUEST_DELAY_TIME:
-            Ref: FacetsRequestDelayTime
           IGNORE_STREAM_MESSAGES: 'false'
-      VpcConfig:
-        SecurityGroupIds:
-        - Fn::ImportValue:
-            Fn::Sub: ${Environment}-facets-event-coordinator-security-group-${AWS::Region}
-        SubnetIds:
-          Fn::Split:
-          - ','
-          - Fn::ImportValue:
-              Fn::Sub: ${Environment}-facets-event-coordinator-subnets-${AWS::Region}
       Events:
-        KinesisMemberServiceTrigger:
+        KinesisProducerServiceTrigger:
           Type: Kinesis
           Properties:
             Stream:
               Fn::GetAtt:
-              - MemberServiceConsumer
-              - ConsumerARN
-            StartingPosition: LATEST
-            BatchSize: 100
-            ParallelizationFactor: 10
-            Enabled: true
-            MaximumRetryAttempts: 7
-            BisectBatchOnFunctionError: true
-        KinesisClaimServiceTrigger:
-          Type: Kinesis
-          Properties:
-            Stream:
-              Fn::GetAtt:
-              - ClaimServiceConsumer
-              - ConsumerARN
-            StartingPosition: LATEST
-            BatchSize: 100
-            ParallelizationFactor: 10
-            Enabled: true
-            MaximumRetryAttempts: 7
-            BisectBatchOnFunctionError: true
-        KinesisReplayTrigger:
-          Type: Kinesis
-          Properties:
-            Stream:
-              Fn::GetAtt:
-              - ReplayConsumer
+              - ProducerServiceConsumer
               - ConsumerARN
             StartingPosition: LATEST
             BatchSize: 100
@@ -230,7 +64,7 @@ Resources:
     Properties:
       Path: /
       RoleName:
-        Fn::Sub: facets-event-coordinator-role-${Environment}
+        Fn::Sub: producer-crm-sink-role-${Environment}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -243,7 +77,7 @@ Resources:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
       - arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole
-      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
       Policies:
       - PolicyName: necessary-permissions
         PolicyDocument:
@@ -252,238 +86,4 @@ Resources:
           - Effect: Allow
             Action: kinesis:Get*
             Resource:
-              Ref: MemberServiceStreamArn
-          - Effect: Allow
-            Action: kinesis:Get*
-            Resource:
-              Ref: ClaimServiceStreamArn
-          - Effect: Allow
-            Action: kinesis:Get*
-            Resource:
-              Ref: ReplayStreamArn
-          - Effect: Allow
-            Action:
-            - s3:*
-            Resource:
-            - Fn::GetAtt:
-              - FacetsEventCoordinatorBucket
-              - Arn
-            - Fn::Join:
-              - /
-              - - Fn::GetAtt:
-                  - FacetsEventCoordinatorBucket
-                  - Arn
-                - '*'
-          - Effect: Allow
-            Action:
-            - kms:Decrypt
-            - kms:Encrypt
-            - kms:GenerateDataKey
-            - kms:ReEncrypt
-            - kms:Describe
-            Resource:
-            - Fn::ImportValue:
-                Fn::Sub: ${Environment}-enterprise-event-bus-kms-key-arn-${AWS::Region}
-            - Fn::GetAtt:
-              - FacetsEventCoordinatorBucketKMSKey
-              - Arn
-  FacetsEventCoordinatorLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName:
-        Ref: ApiGateway
-      Principal: apigateway.amazonaws.com
-      SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${FacetsEventCoordinatorApi}/*
-  ApiGateway:
-    Type: AWS::Serverless::Function
-    Properties:
-      Runtime: nodejs12.x
-      Handler: dist/lambda-api-entry-point.handler
-      CodeUri: s3://hpo-services-cloudformation-dev-003888721705/f7b57a459ba48460aa27929779864ff2
-      Timeout: 60
-      MemorySize:
-        Fn::If:
-        - IsProduction
-        - 512
-        - 256
-      Role:
-        Fn::GetAtt:
-        - Role
-        - Arn
-      VpcConfig:
-        SecurityGroupIds:
-        - Fn::ImportValue:
-            Fn::Sub: ${Environment}-facets-event-coordinator-security-group-${AWS::Region}
-        SubnetIds:
-          Fn::Split:
-          - ','
-          - Fn::ImportValue:
-              Fn::Sub: ${Environment}-facets-event-coordinator-subnets-${AWS::Region}
-      Environment:
-        Variables:
-          ENVIRONMENT:
-            Fn::Sub: ${Environment}
-          GATEWAY_URL:
-            Ref: GatewayUrl
-          OUTPUT_S3:
-            Ref: FacetsEventCoordinatorBucket
-  FacetsEventCoordinatorApi:
-    Type: AWS::Serverless::Api
-    DependsOn: ApiGateway
-    Properties:
-      Name:
-        Fn::Sub: FacetsEventCoordinatorApi-${Environment}
-      StageName:
-        Ref: Environment
-      EndpointConfiguration: PRIVATE
-      DefinitionBody:
-        Fn::Transform:
-          Name: AWS::Include
-          Parameters:
-            Location: s3://hpo-services-cloudformation-dev-003888721705/4273fd4c2fd49894983703be2ee6fab7
-        x-amazon-apigateway-endpoint-configuration:
-          vpcEndpointIds:
-          - Ref: ApiVpceId
-        x-amazon-apigateway-policy:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Principal: '*'
-            Action:
-            - execute-api:Invoke
-            Resource: execute-api:/*
-            Condition:
-              StringEquals:
-                aws:sourceVpce:
-                  Ref: ApiVpceId
-      MethodSettings:
-      - ResourcePath: /*
-        HttpMethod: '*'
-        LoggingLevel: ERROR
-      Cors:
-        AllowMethods: "'*'"
-        AllowHeaders: "'*'"
-        AllowOrigin: "'*'"
-  FacetsEventCoordinatorApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    Properties:
-      Enabled: true
-      Name:
-        Fn::Sub: FacetsEventCoordinatorApiKey-${Environment}
-  FacetsEventCoordinatorApiUsagePlan:
-    Type: AWS::ApiGateway::UsagePlan
-    DependsOn: FacetsEventCoordinatorApiStage
-    Properties:
-      ApiStages:
-      - ApiId:
-          Ref: FacetsEventCoordinatorApi
-        Stage:
-          Ref: Environment
-  FacetsEventCoordinatorApiUsagePlanKey:
-    Type: AWS::ApiGateway::UsagePlanKey
-    Properties:
-      KeyId:
-        Ref: FacetsEventCoordinatorApiKey
-      KeyType: API_KEY
-      UsagePlanId:
-        Ref: FacetsEventCoordinatorApiUsagePlan
-  MergeClaims:
-    Type: AWS::Serverless::Function
-    Properties:
-      Layers:
-      - Fn::Sub: arn:aws:lambda:${AWS::Region}:634166935893:layer:vault-lambda-extension:6
-      Runtime: nodejs12.x
-      Handler: dist/lambda-merge-claim-files.handler
-      CodeUri: s3://hpo-services-cloudformation-dev-003888721705/f7b57a459ba48460aa27929779864ff2
-      Timeout: 60
-      MemorySize:
-        Fn::If:
-        - IsProduction
-        - 512
-        - 256
-      Role:
-        Fn::GetAtt:
-        - Role
-        - Arn
-      VpcConfig:
-        SecurityGroupIds:
-        - Fn::ImportValue:
-            Fn::Sub: ${Environment}-facets-event-coordinator-security-group-${AWS::Region}
-        SubnetIds:
-          Fn::Split:
-          - ','
-          - Fn::ImportValue:
-              Fn::Sub: ${Environment}-facets-event-coordinator-subnets-${AWS::Region}
-      Environment:
-        Variables:
-          ENVIRONMENT:
-            Fn::Sub: ${Environment}
-          VAULT_ADDR:
-            Ref: VaultUri
-          VAULT_AUTH_PROVIDER: aws
-          VAULT_AUTH_ROLE:
-            Ref: VaultAuthRole
-          VAULT_SECRET_PATH:
-            Ref: VaultSecretPath
-          CLAIMS_S3:
-            Ref: FacetsEventCoordinatorBucket
-          MERGE_COUNT:
-            Ref: ClaimsMergeCount
-  CronEvent:
-    Type: AWS::Events::Rule
-    Properties:
-      Description: ScheduledRule
-      ScheduleExpression: cron(0/6 * * * ? *)
-      Targets:
-      - Arn:
-          Fn::GetAtt:
-          - MergeClaims
-          - Arn
-        Id:
-          Ref: MergeClaims
-  LambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName:
-        Fn::GetAtt:
-        - MergeClaims
-        - Arn
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn:
-        Fn::GetAtt:
-        - CronEvent
-        - Arn
-  EventsMetadataTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName:
-        Fn::Sub: fec-events-metadata-table-${Environment}
-      KeySchema:
-      - AttributeName: eventId
-        KeyType: HASH
-      AttributeDefinitions:
-      - AttributeName: eventId
-        AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-    DependsOn:
-    - DynamoDBPolicy
-  DynamoDBPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: DynamoDBPolicy
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Action:
-          - dynamodb:GetItem
-          - dynamodb:PutItem
-          - dynamodb:Query
-          - dynamodb:DescribeTable
-          - dynamodb:ListTables
-          Resource: '*'
-      Roles:
-      - Ref: Role
+              Ref: ProducerServiceStreamArn

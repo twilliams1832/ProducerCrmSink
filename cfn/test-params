@@ -1,0 +1,1 @@
+ProducerServiceStreamArn=arn:aws:kinesis:us-east-1:381522763468:stream/producer-event-bus Environment=dev EventFilter=producerCreated

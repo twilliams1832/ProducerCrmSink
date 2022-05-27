@@ -22,7 +22,7 @@ export class SqsClientService {
             region: 'us-east-1' /*use config service and default region*/
         });
 
-        let messageString = JSON.stringify(message);
+        const messageString = JSON.stringify(message);
         this.logger.log(`messageString; ${messageString}`);
 
         const params = {
@@ -54,7 +54,7 @@ export class SqsClientService {
             region: 'us-east-1' /*use config service and default region*/
         });
 
-        let params = {
+        const params = {
             MessageAttributeNames: [
                "All"
             ],
