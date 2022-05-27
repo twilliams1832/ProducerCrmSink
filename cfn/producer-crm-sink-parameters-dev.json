@@ -1,0 +1,54 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "ApiVpceId",
+    "ParameterValue": "vpce-043b38267ba2d75f6"
+  },
+  {
+    "ParameterKey": "ReplayStreamArn",
+    "ParameterValue": "arn:aws:kinesis:us-east-1:003888721705:stream/enterprise-event-bus-dev-replay"
+  },
+  {
+    "ParameterKey": "MemberServiceStreamArn",
+    "ParameterValue": "arn:aws:kinesis:us-east-1:003888721705:stream/enterprise-event-bus-dev-member-service"
+  },
+  {
+    "ParameterKey": "ClaimServiceStreamArn",
+    "ParameterValue": "arn:aws:kinesis:us-east-1:003888721705:stream/enterprise-event-bus-dev-encounter-service"
+  },
+  {
+    "ParameterKey": "VaultAuthRole",
+    "ParameterValue": "facetseventcoordinator-owner"
+  },
+  {
+    "ParameterKey": "VaultSecretPath",
+    "ParameterValue": "lob/lotrust/facetseventcoordinator/dev/kv/data/facets-event-coordinator"
+  },
+  {
+    "ParameterKey": "EebEventFilter",
+    "ParameterValue": "dcMemberEnrolled,dcMemberUpdate,encDcClaimPartAWeeklyModified,encDcClaimPartBWeeklyModified"
+  },
+  {
+    "ParameterKey": "GatewayUrl",
+    "ParameterValue": "https://wkgqprs815.execute-api.us-east-1.amazonaws.com/dev"
+  },
+  {
+    "ParameterKey": "FacetApiUrl",
+    "ParameterValue": "https://7ff9m6wnvd-vpce-043b38267ba2d75f6.execute-api.us-east-1.amazonaws.com/dev/api"
+  },
+  {
+    "ParameterKey": "ServiceNowBaseUrl",
+    "ParameterValue": "lumeristest.service-now.com"
+  },
+  {
+    "ParameterKey": "ClaimsMergeCount",
+    "ParameterValue": "500"
+  },
+  {
+    "ParameterKey": "FacetsRequestDelayTime",
+    "ParameterValue": "500"
+  }
+]

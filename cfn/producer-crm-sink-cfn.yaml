@@ -1,0 +1,157 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: An AWS Serverless Application demonstrating the Producer CRM Sink.
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment; dev, qa, sit, stg, prod
+    AllowedValues:
+      - dev
+      - sit
+      - stg
+      - prod
+  ProducerServiceStreamArn:
+    Type: String
+  EebEventFilter:
+    Type: String
+  GatewayUrl:
+    Type: String
+
+Resources:
+  ##########################################################################
+  # KINESIS READER
+  ##########################################################################
+  ProducerServiceConsumer:
+    Type: AWS::Kinesis::StreamConsumer
+    Properties:
+      ConsumerName: !Sub producer-crm-sink-stream-consumer-${Environment}
+      StreamARN: !Ref ProducerServiceStreamArn
+
+  KinesisTriggeredLambdaHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt  Role.Arn
+      CodeUri: producer-crm-sink.zip
+      FunctionName: !Sub producer-crm-sink-${Environment}
+      Handler: dist/lambda-entry-point.handler
+      Runtime: nodejs12.x
+      #Runtime: provided.al2
+      Description: Function is called in response to a kinesis event
+      Timeout: 900
+      MemorySize: 3008
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          EEB_EVENT_FILTER: !Ref EebEventFilter
+          GATEWAY_URL: !Ref GatewayUrl
+          NO_COLOR: 'true'
+          IGNORE_STREAM_MESSAGES: 'false'
+      Events:
+        KinesisProducerServiceTrigger:
+          Type: Kinesis
+          Properties:
+            Stream: !GetAtt ProducerServiceConsumer.ConsumerARN
+            StartingPosition: LATEST
+            BatchSize: 100
+            ParallelizationFactor: 10
+            Enabled: true
+            MaximumRetryAttempts: 7
+            BisectBatchOnFunctionError: true
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Sub "producer-crm-sink-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+      Policies:
+        - PolicyName: "necessary-permissions"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: kinesis:Get*
+                Resource: !Ref ProducerServiceStreamArn
+
+  # FacetsEventCoordinatorLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     Action: lambda:InvokeFunction
+  #     FunctionName: !Ref ApiGateway
+  #     Principal: apigateway.amazonaws.com
+  #     SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${FacetsEventCoordinatorApi}/*
+
+  # ApiGateway:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Runtime: nodejs12.x
+  #     Handler: dist/lambda-api-entry-point.handler
+  #     CodeUri: facets-event-coordinator.zip
+  #     Timeout: 60
+  #     MemorySize: !If [IsProduction, 512, 256]
+  #     Role: !GetAtt Role.Arn
+  #     Environment:
+  #       Variables:
+  #         ENVIRONMENT: !Sub ${Environment}
+  #         GATEWAY_URL: !Ref GatewayUrl
+
+  #MergeClaims:
+  #  Type: AWS::Serverless::Function
+  #  Properties:
+  #    Layers:
+  #      - !Sub arn:aws:lambda:${AWS::Region}:634166935893:layer:vault-lambda-extension:6
+  #    Runtime: nodejs12.x
+  #    Handler: dist/lambda-merge-claim-files.handler
+  #    CodeUri: facets-event-coordinator.zip
+  #    Timeout: 60
+  #    MemorySize: !If [IsProduction, 512, 256]
+  #    Role: !GetAtt Role.Arn
+  #    VpcConfig:
+  #      SecurityGroupIds:
+  #       - Fn::ImportValue: !Sub '${Environment}-facets-event-coordinator-security-group-${AWS::Region}'
+  #      SubnetIds: !Split
+  #        - ","
+  #        - Fn::ImportValue: !Sub "${Environment}-facets-event-coordinator-subnets-${AWS::Region}"
+  #    Environment:
+  #      Variables:
+  #        ENVIRONMENT: !Sub ${Environment}
+  #        VAULT_ADDR: !Ref VaultUri
+  #        VAULT_AUTH_PROVIDER: aws
+  #        VAULT_AUTH_ROLE: !Ref VaultAuthRole
+  #        VAULT_SECRET_PATH: !Ref VaultSecretPath
+  #        CLAIMS_S3: !Ref FacetsEventCoordinatorBucket
+  #        MERGE_COUNT: !Ref ClaimsMergeCount
+
+  #CronEvent:
+  #  Type: AWS::Events::Rule
+  #  Properties:
+  #    Description: ScheduledRule
+  #    ScheduleExpression: cron(0/6 * * * ? *) #the event should trigger @ every 6 minutes
+  #    Targets:
+  #      - Arn:
+  #          Fn::GetAtt: [ MergeClaims , "Arn" ] #reference the lambda function by its arn
+  #        Id:
+  #          Ref: MergeClaims #unique name of the target
+
+  #LambdaInvokePermission:
+  #  Type: AWS::Lambda::Permission
+  #  Properties:
+  #    FunctionName:
+  #      Fn::GetAtt: [ MergeClaims ,"Arn" ] #reference the lambda function by its arn
+  #    Action: lambda:InvokeFunction #allow invoking of lambda functions
+  #    Principal: events.amazonaws.com #grant permission to the events system
+  #    SourceArn:
+  #      Fn::GetAtt: [ CronEvent , "Arn" ] #define which event is allowed to trigger lambdas

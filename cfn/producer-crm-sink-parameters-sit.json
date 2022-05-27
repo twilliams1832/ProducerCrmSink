@@ -1,0 +1,54 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "sit"
+  },
+  {
+    "ParameterKey": "ApiVpceId",
+    "ParameterValue": "vpce-02829e5ebbb5d4b41"
+  },
+  {
+    "ParameterKey": "ReplayStreamArn",
+    "ParameterValue": "arn:aws:kinesis:us-east-1:754720606388:stream/enterprise-event-bus-sit-replay"
+  },
+  {
+    "ParameterKey": "MemberServiceStreamArn",
+    "ParameterValue": "arn:aws:kinesis:us-east-1:754720606388:stream/enterprise-event-bus-sit-member-service"
+  },
+  {
+    "ParameterKey": "ClaimServiceStreamArn",
+    "ParameterValue": "arn:aws:kinesis:us-east-1:754720606388:stream/enterprise-event-bus-sit-encounter-service"
+  },
+  {
+    "ParameterKey": "VaultAuthRole",
+    "ParameterValue": "facetseventcoordinator-owner"
+  },
+  {
+    "ParameterKey": "VaultSecretPath",
+    "ParameterValue": "lob/lotrust/facetseventcoordinator/sit/kv/data/facets-event-coordinator"
+  },
+  {
+    "ParameterKey": "EebEventFilter",
+    "ParameterValue": "dcMemberEnrolled,dcMemberUpdate,encDcClaimPartAWeeklyModified,encDcClaimPartBWeeklyModified"
+  },
+  {
+    "ParameterKey": "GatewayUrl",
+    "ParameterValue": "https://b9pwlv37ad.execute-api.us-east-1.amazonaws.com/sit"
+  },
+  {
+    "ParameterKey": "FacetApiUrl",
+    "ParameterValue": "https://jbwhm34po6-vpce-02829e5ebbb5d4b41.execute-api.us-east-1.amazonaws.com/sit/api"
+  },
+  {
+    "ParameterKey": "ServiceNowBaseUrl",
+    "ParameterValue": "lumeristest.service-now.com"
+  },
+  {
+    "ParameterKey": "ClaimsMergeCount",
+    "ParameterValue": "500"
+  },
+  {
+    "ParameterKey": "FacetsRequestDelayTime",
+    "ParameterValue": "500"
+  }
+]

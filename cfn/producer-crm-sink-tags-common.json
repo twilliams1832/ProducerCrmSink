@@ -1,0 +1,38 @@
+[
+    {
+        "Key": "Name",
+        "Value": "Facets Event Coordinator"
+    },
+    {
+        "Key": "Component",
+        "Value": "Facets Event Coordinator"
+    },
+    {
+        "Key": "ContactGroup",
+        "Value": "Lumeris Team Drivers"
+    },
+    {
+        "Key": "Owner",
+        "Value": "_lumeristeamdrivers@lumeris.com"
+    },
+    {
+        "Key": "Consumer",
+        "Value": "Internal System"
+    },
+    {
+        "Key": "CostCenter",
+        "Value": "78-900"
+    },
+    {
+        "Key": "Customer",
+        "Value": "Enterprise Event Bus"
+    },
+    {
+        "Key": "Application",
+        "Value": "Facets Event Coordinator"
+    },
+    {
+        "Key": "DataClassification",
+        "Value": "PHI"
+    }
+]

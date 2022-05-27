@@ -1,0 +1,85 @@
+swagger: '2.0'
+info:
+  description: Facets Event Coordinator API
+  version: '1.0.0'
+  title: Facets Event Coordinator API
+
+paths:
+ '/v/{version}/status':
+    get:
+      tags:
+        - Status
+      summary: get api status
+      operationId: Status_GetStatus
+      consumes: []
+      produces:
+        - application/json
+      parameters:
+        - name: version
+          in: path
+          description: version
+          required: true
+          type: string
+          default: '1'
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiGateway.Arn}/invocations
+        type: aws_proxy
+ '/v/{version}/replay':
+    post:
+      tags:
+        - Replay
+      summary: post replay request
+      operationId: Replay_PostReplayRequest
+      consumes:
+        - application/json
+        - text/json
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - name: version
+          in: path
+          description: version
+          required: true
+          type: string
+          default: '1'
+        - name: replayRequest
+          in: body
+          description: The replay request
+          required: true
+          schema:
+            $ref: '#/definitions/ReplayRequest'
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiGateway.Arn}/invocations
+        type: aws_proxy
+definitions:
+  ReplayRequest:
+    description: 'ReplayRequest'
+    type: object
+    properties:
+      componentSource:
+        description: 'Gets or Sets component source'
+        type: string
+      replayFromDate:
+        description: 'Gets or Sets replay from date'
+        type: string
+# Added by API Auto Mocking Plugin
+host: virtserver.swaggerhub.com
+schemes:
+  - https
+# Added by API Auto Mocking Plugin
+basePath: /Lumeris9/FacetEventCoordinatorAPI/1.0.0
